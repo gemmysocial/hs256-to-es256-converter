@@ -15,7 +15,7 @@ async function issueEs256Jwt(userDid: string) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // ✅ Always set these headers
+  // ✅ Always set CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -29,8 +29,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // ✅ Safely parse only on POST
   try {
-    const { did } = req.body || {};
+    // Unlike Next.js, Vercel serverless functions do *not* automatically parse JSON
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const { did } = body || {};
+
     if (!did) {
       return res.status(400).json({ error: "Missing DID" });
     }
