@@ -4,6 +4,8 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 async function issueEs256Jwt(userDid: string) {
   const { SignJWT, importPKCS8 } = await import("jose");
 
+  console.log("PRIVATE KEY:", process.env.ES256_PRIVATE_KEY);
+
   const privateKey = await importPKCS8(
     process.env.ES256_PRIVATE_KEY!.replace(/\\n/g, "\n"),
     "ES256"
