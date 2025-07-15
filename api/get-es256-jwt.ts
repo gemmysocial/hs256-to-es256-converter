@@ -35,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Unlike Next.js, Vercel serverless functions do *not* automatically parse JSON
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    const { did } = body.did || {};
+    const { did } = body || {};
 
     if (!did) {
       return res.status(400).json({ error: "Missing DID" });
@@ -44,6 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const token = await issueEs256Jwt(did);
     return res.status(200).json({ token });
   } catch (err) {
+    console.log("err", err);
     console.error("JWT issuing error:", err);
     return res.status(500).json({ error: "Internal Server Error" });
   }
