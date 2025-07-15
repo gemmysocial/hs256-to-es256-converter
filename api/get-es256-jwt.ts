@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 //import { SignJWT, importPKCS8 } from "jose";
-//
+////
+
 async function issueEs256Jwt(userDid: string) {
   const { SignJWT, importPKCS8 } = await import("jose");
 
