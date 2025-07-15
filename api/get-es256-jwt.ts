@@ -35,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Unlike Next.js, Vercel serverless functions do *not* automatically parse JSON
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    const { did } = body || {};
+    const { did } = body.did || {};
 
     if (!did) {
       return res.status(400).json({ error: "Missing DID" });
