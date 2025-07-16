@@ -1,16 +1,23 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 async function getJwks() {
-  const { importPKCS8, exportJWK } = await import("jose");
+  const { importPKCS8, exportSPKI } = await import("jose");
 
-  // Import the private key to extract the public key
+  // Import the private key
   const privateKey = await importPKCS8(
     process.env.ES256_PRIVATE_KEY!.replace(/\\n/g, "\n"),
     "ES256"
   );
 
-  // Export the public key in JWK format
-  const publicKey = await exportJWK(privateKey);
+  // Export the public key in SPKI format first
+  const spkiPublicKey = await exportSPKI(privateKey);
+
+  // Import the SPKI public key to get an extractable key
+  const { importSPKI, exportJWK } = await import("jose");
+  const extractablePublicKey = await importSPKI(spkiPublicKey, "ES256");
+
+  // Now export as JWK
+  const publicKey = await exportJWK(extractablePublicKey);
 
   // Create the JWKS response
   const jwks = {
