@@ -1,34 +1,42 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 async function getJwks() {
-  const { importPKCS8, exportSPKI } = await import("jose");
+  const crypto = await import("crypto");
 
-  // Import the private key
-  const privateKey = await importPKCS8(
-    process.env.ES256_PRIVATE_KEY!.replace(/\\n/g, "\n"),
-    "ES256"
-  );
+  // Parse the private key PEM
+  const privateKeyPem = process.env.ES256_PRIVATE_KEY!.replace(/\\n/g, "\n");
 
-  // Export the public key in SPKI format first
-  const spkiPublicKey = await exportSPKI(privateKey);
+  // Create a key object from the private key
+  const privateKeyObj = crypto.createPrivateKey({
+    key: privateKeyPem,
+    format: "pem",
+  });
 
-  // Import the SPKI public key to get an extractable key
-  const { importSPKI, exportJWK } = await import("jose");
-  const extractablePublicKey = await importSPKI(spkiPublicKey, "ES256");
+  // Extract the public key from the private key
+  const publicKeyObj = crypto.createPublicKey(privateKeyObj);
 
-  // Now export as JWK
-  const publicKey = await exportJWK(extractablePublicKey);
+  // Export the public key in DER format
+  const publicKeyDer = publicKeyObj.export({ format: "der", type: "spki" });
+
+  // For ES256 (P-256), the public key is 65 bytes: 1 byte prefix + 32 bytes x + 32 bytes y
+  // The first byte is 0x04 (uncompressed point)
+  const x = publicKeyDer.slice(27, 59); // x coordinate (32 bytes)
+  const y = publicKeyDer.slice(59, 91); // y coordinate (32 bytes)
+
+  // Convert to base64url encoding
+  const xBase64Url = x.toString("base64url");
+  const yBase64Url = y.toString("base64url");
 
   // Create the JWKS response
   const jwks = {
     keys: [
       {
-        kty: publicKey.kty,
+        kty: "EC",
         use: "sig",
-        crv: publicKey.crv,
+        crv: "P-256",
         kid: process.env.ES256_KEY_ID || "default-key",
-        x: publicKey.x,
-        y: publicKey.y,
+        x: xBase64Url,
+        y: yBase64Url,
         alg: "ES256",
       },
     ],
