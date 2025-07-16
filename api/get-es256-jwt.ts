@@ -13,7 +13,10 @@ async function issueEs256Jwt(userDid: string) {
   );
 
   return await new SignJWT({ sub: userDid })
-    .setProtectedHeader({ alg: "ES256" })
+    .setProtectedHeader({
+      alg: "ES256",
+      kid: process.env.ES256_KEY_ID || "default-key",
+    })
     .setIssuedAt()
     .setExpirationTime("1h")
     .sign(privateKey);
