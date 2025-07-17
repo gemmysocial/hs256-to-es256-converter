@@ -6,7 +6,6 @@ async function getJwks() {
     keys: [
       {
         kty: "EC",
-        kid: process.env.ES256_KEY_ID || "default-key",
         d: "Aqrw7SeRNkaO8RywNJeMK58Tx7sOtdRhOwbVHapU8ms",
         crv: "P-256",
         x: "V703uuUvJ_RqSVPOoi0dJkirCJIej_OwMUDky2p7c2U",
