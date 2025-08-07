@@ -1,5 +1,25 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
+// Whitelisted origins
+const ALLOWED_ORIGINS = [
+  "http://localhost:19006",
+  "https://*.gems.xyz",
+  "https://*.bsky-app.pages.dev",
+];
+
+// Check if origin is allowed
+function isOriginAllowed(origin: string): boolean {
+  return ALLOWED_ORIGINS.some((allowedOrigin) => {
+    if (allowedOrigin.includes("*")) {
+      // Handle wildcard domains
+      const pattern = allowedOrigin.replace("*", ".*");
+      const regex = new RegExp(`^${pattern}$`);
+      return regex.test(origin);
+    }
+    return allowedOrigin === origin;
+  });
+}
+
 //
 
 async function issueEs256Jwt(userDid: string) {
@@ -21,8 +41,11 @@ async function issueEs256Jwt(userDid: string) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // ✅ Always set CORS headers
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  // ✅ Set CORS headers based on origin
+  const origin = req.headers.origin;
+  if (origin && isOriginAllowed(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
