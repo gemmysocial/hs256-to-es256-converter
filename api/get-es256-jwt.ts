@@ -5,6 +5,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:19006",
   "https://*.gems.xyz",
   "https://*.bsky-app.pages.dev",
+  "https://thegems.app",
 ];
 
 // Check if origin is allowed
