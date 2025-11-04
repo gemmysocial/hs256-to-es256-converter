@@ -43,12 +43,6 @@ async function issueEs256Jwt(userDid: string) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // ✅ Set CSP headers according to Privy recommendations
-  setCSPHeaders(res, {
-    // Add allowed origins to connect-src for API calls from these domains
-    additionalConnectSrc: ALLOWED_ORIGINS,
-  });
-
   // ✅ Set CORS headers based on origin
   const origin = req.headers.origin;
   if (origin && isOriginAllowed(origin)) {
