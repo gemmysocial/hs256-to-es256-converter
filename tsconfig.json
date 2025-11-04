@@ -8,6 +8,6 @@
       "forceConsistentCasingInFileNames": true,
       "skipLibCheck": true
     },
-    "include": ["api", "src"]
+    "include": ["api", "src", "utils"]
   }
   
