@@ -22,24 +22,46 @@ function isOriginAllowed(origin: string): boolean {
   });
 }
 
-// Token cache: maps DID -> { token, expiresAt }
-const tokenCache = new Map<string, { token: string; expiresAt: number }>();
+// Token cache: maps DID -> { token, expiresAt, windowStart }
+const tokenCache = new Map<
+  string,
+  { token: string; expiresAt: number; windowStart: number }
+>();
 
-// Check if a token is still valid (with 5 minute buffer before expiration)
-function isTokenValid(expiresAt: number): boolean {
-  return expiresAt > Date.now() / 1000 + 300; // 5 minute buffer
+// Use 1-hour time windows for deterministic token generation
+// All requests within the same hour window get the same token
+const TOKEN_WINDOW_SECONDS = 3600; // 1 hour
+
+// Get the start of the current time window
+function getCurrentWindowStart(): number {
+  const now = Math.floor(Date.now() / 1000);
+  return Math.floor(now / TOKEN_WINDOW_SECONDS) * TOKEN_WINDOW_SECONDS;
+}
+
+// Check if a cached token is still valid for the current window
+function isTokenValid(cached: {
+  expiresAt: number;
+  windowStart: number;
+}): boolean {
+  const currentWindow = getCurrentWindowStart();
+  // Token is valid if it's from the current window and hasn't expired
+  return (
+    cached.windowStart === currentWindow && cached.expiresAt > Date.now() / 1000
+  );
 }
 
 async function issueEs256Jwt(userDid: string) {
-  const { SignJWT, importPKCS8, decodeJwt } = await import("jose");
+  const { SignJWT, importPKCS8 } = await import("jose");
+
+  const currentWindow = getCurrentWindowStart();
 
   // Check cache first
   const cached = tokenCache.get(userDid);
-  if (cached && isTokenValid(cached.expiresAt)) {
+  if (cached && isTokenValid(cached)) {
     return cached.token;
   }
 
-  // Generate new token
+  // Generate new token with deterministic iat based on current window
   const privateKey = await importPKCS8(
     process.env.ES256_PRIVATE_KEY!.replace(/\\n/g, "\n"),
     "ES256"
@@ -50,16 +72,14 @@ async function issueEs256Jwt(userDid: string) {
       alg: "ES256",
       kid: process.env.ES256_KEY_ID || "default-key",
     })
-    .setIssuedAt()
+    .setIssuedAt(currentWindow) // Use window start as iat for determinism
     .setExpirationTime("1h")
     .sign(privateKey);
 
-  // Decode to get expiration time
-  const decoded = decodeJwt(token);
-  const expiresAt = decoded.exp || Math.floor(Date.now() / 1000) + 3600;
+  const expiresAt = currentWindow + TOKEN_WINDOW_SECONDS;
 
   // Cache the token
-  tokenCache.set(userDid, { token, expiresAt });
+  tokenCache.set(userDid, { token, expiresAt, windowStart: currentWindow });
 
   return token;
 }
