@@ -22,17 +22,30 @@ function isOriginAllowed(origin: string): boolean {
   });
 }
 
-//
+// Token cache: maps DID -> { token, expiresAt }
+const tokenCache = new Map<string, { token: string; expiresAt: number }>();
+
+// Check if a token is still valid (with 5 minute buffer before expiration)
+function isTokenValid(expiresAt: number): boolean {
+  return expiresAt > Date.now() / 1000 + 300; // 5 minute buffer
+}
 
 async function issueEs256Jwt(userDid: string) {
-  const { SignJWT, importPKCS8 } = await import("jose");
+  const { SignJWT, importPKCS8, decodeJwt } = await import("jose");
 
+  // Check cache first
+  const cached = tokenCache.get(userDid);
+  if (cached && isTokenValid(cached.expiresAt)) {
+    return cached.token;
+  }
+
+  // Generate new token
   const privateKey = await importPKCS8(
     process.env.ES256_PRIVATE_KEY!.replace(/\\n/g, "\n"),
     "ES256"
   );
 
-  return await new SignJWT({ sub: userDid })
+  const token = await new SignJWT({ sub: userDid })
     .setProtectedHeader({
       alg: "ES256",
       kid: process.env.ES256_KEY_ID || "default-key",
@@ -40,6 +53,15 @@ async function issueEs256Jwt(userDid: string) {
     .setIssuedAt()
     .setExpirationTime("1h")
     .sign(privateKey);
+
+  // Decode to get expiration time
+  const decoded = decodeJwt(token);
+  const expiresAt = decoded.exp || Math.floor(Date.now() / 1000) + 3600;
+
+  // Cache the token
+  tokenCache.set(userDid, { token, expiresAt });
+
+  return token;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
