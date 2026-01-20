@@ -102,6 +102,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  return res.status(500).json({ error: "Internal Server Error" }); // TODO: Remove this
+
   // ✅ Safely parse only on POST
   try {
     // Unlike Next.js, Vercel serverless functions do *not* automatically parse JSON
